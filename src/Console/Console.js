@@ -31,6 +31,10 @@ export default class Console extends Tool {
   }
   init($el, container) {
     super.init($el)
+
+    this._history = []
+    this._historyIndex = 0
+
     this._container = container
 
     this._appendTpl()
@@ -134,16 +138,16 @@ export default class Console extends Tool {
     this._style = evalCss(require('./Console.scss'))
     $el.append(require('./Console.hbs')())
 
-    const _$inputContainer = $el.find('.eruda-js-input')
-    const _$input = _$inputContainer.find('textarea')
-    const _$inputBtns = _$inputContainer.find('.eruda-buttons')
+    const _$inputContainerMain = $el.find('.eruda-console-main')
+    const _$inputContainer = _$inputContainerMain.find('.eruda-js-input')
+    const _$input = _$inputContainer.find('.eruda-js-text-input')
 
     Object.assign(this, {
       _$control: $el.find('.eruda-control'),
       _$logs: $el.find('.eruda-logs-container'),
+      _$inputContainerMain,
       _$inputContainer,
       _$input,
-      _$inputBtns,
       _$searchKeyword: $el.find('.eruda-search-keyword'),
     })
   }
@@ -195,7 +199,6 @@ export default class Console extends Tool {
   _bindEvent() {
     const container = this._container
     const $input = this._$input
-    const $inputBtns = this._$inputBtns
     const $control = this._$control
     const $searchKeyword = this._$searchKeyword
 
@@ -219,18 +222,32 @@ export default class Console extends Tool {
         logger.setOption('filter', new RegExp(escapeRegExp(lowerCase(filter))))
       })
 
-    $inputBtns
-      .on('click', '.eruda-cancel', () => this._hideInput())
-      .on('click', '.eruda-execute', () => {
-        const jsInput = $input.val().trim()
+    $input[0].addEventListener('keydown', (e) => {
+      if (!e.shiftKey && e.code == 'Enter') {
+        e.preventDefault()
+
+        const jsInput = $input[0].textContent.trim()
         if (jsInput === '') return
 
-        logger.evaluate(jsInput)
-        $input.val('').get(0).blur()
-        this._hideInput()
-      })
+        this._history.unshift(jsInput)
+        this._historyIndex = 0
 
-    $input.on('focusin', () => this._showInput())
+        logger.evaluate(jsInput)
+        $input[0].textContent = ''
+      } else if (!e.shiftKey && ['ArrowUp', 'ArrowDown'].includes(e.code)) {
+        const newIndex = this._historyIndex + (e.code == 'ArrowUp' ? 1 : -1)
+        if (newIndex >= 0 && newIndex <= this._history.length) {
+          this._historyIndex = newIndex
+          $input[0].textContent = newIndex == 0 ? '' : this._history[newIndex - 1]
+        }
+      }
+
+      this._$inputContainerMain[0].scrollTo({top: this._$inputContainerMain[0].scrollHeight})
+    })
+
+    this._$inputContainerMain[0].addEventListener('click', (e) => {
+      if (e.target == this._$inputContainerMain[0]) $input[0].focus()
+    })
 
     logger.on('insert', (log) => {
       const autoShow = log.type === 'error' && config.get('displayIfErr')
@@ -239,14 +256,6 @@ export default class Console extends Tool {
     })
 
     container.on('show', this._handleShow)
-  }
-  _hideInput() {
-    this._$inputContainer.rmClass('eruda-active')
-    this._$inputBtns.hide()
-  }
-  _showInput() {
-    this._$inputContainer.addClass('eruda-active')
-    this._$inputBtns.show()
   }
   _rmCfg() {
     const cfg = this.config

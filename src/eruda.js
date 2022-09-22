@@ -45,7 +45,32 @@ export default {
 
     if (autoScale) this._autoScale()
   },
+  initDesktop() {
+    this.init()
+    if (!this._isDesktopInit) {
+      this._isDesktopInit = true
+      this._devTools._$el[0].style.height = '40%'
+      const toLoad = ['Code', 'Dom']
+      toLoad.forEach((i) => this._devTools._tools.snippets._snippets.find((j) => j.name == `Load ${i} Plugin`).fn())
+      const order = ['elements', 'dom', 'console', 'sources', 'resources', 'network', 'info', 'code', 'snippets', 'settings']
+      const eruda = this;
+      window.setTimeout(() => {
+        order.forEach((i) => {
+          try {
+            eruda._devTools._navBar._$el[0].appendChild(Array.from(eruda._devTools._navBar._$el[0].children).find((j) => j.textContent == i))
+          } catch (e) {
+            console.warn(e)
+          }
+        })
+        eruda.show('console')
+        eruda._devTools.toggle()
+      }, 200)
+    } else {
+      this._devTools.toggle()
+    }
+  },
   _isInit: false,
+  _isDesktopInit: false,
   version: VERSION,
   util,
   chobitsu,

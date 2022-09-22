@@ -25,7 +25,7 @@ export default class DevTools extends Emitter {
     this._defCfg = extend(
       {
         transparency: 1,
-        displaySize: 80,
+        displaySize: 40,
         theme: isDarkMode() ? 'Dark' : 'Light',
       },
       defaults
